@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>めしログ＆ライフログ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 16px; display: flex; justify-content: center; }
+    .app-container { width: 100%; max-width: 480px; }
+    .card { background: #1e293b; border-radius: 14px; padding: 18px; border: 1px solid #334155; margin-bottom: 16px; position: relative; }
+    .title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #f97316;
+      margin-bottom: 8px;
+      white-space: nowrap;
+    }
+    .desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 14px;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    .btn-gear {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* PROは保持するが通常導線では隠す */
+    .mode-switch { display: none; }
+    .mode-btn { flex: 1; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: bold; color: #94a3b8; cursor: pointer; border-radius: 8px; border: none; background: transparent; }
+    .mode-btn.active { background: #ea580c; color: #fff; }
+
+    label { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin: 12px 0 4px; }
+    input[type="text"], #discordInput { width: 100%; background: #0f172a; border: 1px solid #475569; color: #fff; padding: 10px; border-radius: 8px; font-size: 0.95rem; }
+    .chip-wrap { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .chip { background: #334155; color: #e2e8f0; font-size: 0.8rem; padding: 5px 10px; border-radius: 16px; cursor: pointer; }
+    .chip.active { background: #ea580c; color: #fff; font-weight: bold; }
+
+    /* 最大3枚の写真グリッド */
+    .photo-grid-box { border: 2px dashed #475569; border-radius: 12px; padding: 12px; background: #0f172a; text-align: center; margin: 10px 0; }
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .photo-cell { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden; border: 1px solid #334155; background: #1e293b; }
+    .photo-cell img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .photo-cell .del-btn { position: absolute; top: 4px; right: 4px; background: rgba(220, 38, 38, 0.9); color: #fff; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .add-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f97316; font-size: 0.75rem; border: 2px dashed #ea580c; cursor: pointer; }
+
+    details { margin-top: 14px; }
+    summary { cursor: pointer; color: #cbd5e1; padding: 8px 0; font-size: .85rem; }
+    /* ボタン類 */
+    .btn-main { width: 100%; background: #ea580c; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 12px; }
+    .btn-sub { width: 100%; background: transparent; color: #94a3b8; border: 1px solid #475569; padding: 10px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; margin-top: 8px; }
+    .btn-x { background: #000; color: #fff; border: 1px solid #334155; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; margin-top: 10px; }
+
+    /* 吹き出し・警告・トースト */
+    .bubble { background: #064e3b; border: 1px solid #059669; border-radius: 10px; padding: 12px; font-size: 0.88rem; color: #6ee7b7; line-height: 1.4; margin-bottom: 12px; }
+    .alert-box { background: #7f1d1d; border: 1px solid #dc2626; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 0.82rem; margin-bottom: 10px; display: none; }
+    .toast { background: #ea580c; color: #fff; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 12px; display: none; }
+
+    /* 画像スワイプ拡大モーダル */
+    #imageModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; }
+    #modalImg { max-width: 92%; max-height: 80%; object-fit: contain; border-radius: 8px; }
+    .modal-arrow { position: absolute; top: 50%; transform: translateY(-50%); font-size: 2rem; color: #fff; background: rgba(0,0,0,0.5); border: none; padding: 10px; cursor: pointer; border-radius: 50%; }
+    .modal-close { position: absolute; top: 20px; right: 20px; font-size: 1.8rem; color: #fff; cursor: pointer; }
+ /* ローディングスピナー */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- 設定画面モーダル -->
+    <div id="settingsCard" class="card" style="display: none;">
+      <div class="title">🤝 専属アシスタントとあなたの設定</div>
+      <div class="desc">いつでも変更できます。</div>
+      <p style="margin:12px 0"><a href="https://afcp0721-oss.github.io/meshi-log/guide.html" target="_blank" rel="noopener noreferrer" style="color:#fdba74">📖 はじめての方へ・特徴と使い方 ↗</a></p>
+
+      <label>あなたの呼ばれ方（必須）</label>
+      <input type="text" id="userCallInput" placeholder="例：ボス, ニックネーム" value="ニックネーム">
+      <div class="chip-wrap">
+        <span class="chip" onclick="setCall('ニックネーム')">ニックネーム</span>
+        <span class="chip" onclick="setCall('ボス')">ボス</span>
+        <span class="chip" onclick="setCall('マスター')">マスター</span>
+        <span class="chip" onclick="setCall('大将')">大将</span>
+      </div>
+      <label>AIの名前</label>
+      <input type="text" id="aiNameInput" placeholder="例：ログアシスタント, 相棒" value="ログアシスタント">
+      <div class="chip-wrap">
+        <span class="chip" onclick="setAiName('ログアシスタント')">ログアシスタント</span>
+        <span class="chip" onclick="setAiName('相棒')">相棒</span>
+        <span class="chip" onclick="setAiName('バディ')">バディ</span>
+      </div>
+
+      <label>今日の気分追加（マイフレーズ）</label>
+<input type="text" id="myPhraseInput" placeholder="例：最高！, 染みる…, 優勝！" value="リピ確定！">
+<div class="chip-wrap">
+  <span class="chip active" onclick="setPhrase('最高！')">最高！</span>
+  <span class="chip" onclick="setPhrase('染みる…')">染みる…</span>
+  <span class="chip" onclick="setPhrase('優勝！')">優勝！</span>
+</div>
+
+      <label for="discordInput">Discordの保存先（ウェブフックURL）</label>
+      <input type="password" id="discordInput" placeholder="https://discord.com/api/webhooks/..." autocomplete="off" spellcheck="false" autocapitalize="none">
+      <p class="desc">写真・レポートを自分のDiscordへ保存します。URLはこの端末のブラウザに保存され、記録時に送信処理のためサーバーへ渡します。未設定では預けられません。</p>
+      <details style="margin:12px 0; line-height:1.7;">
+        <summary>Discordの登録・URLの取得方法</summary>
+        <ol style="padding-left:22px;">
+          <li><a href="https://discord.com/register" target="_blank" rel="noopener noreferrer">Discordに登録</a>、またはログインします。</li>
+          <li>自分用のサーバーと、写真を保存するテキストチャンネルを作ります。</li>
+          <li>サーバー設定の「連携サービス」→「ウェブフック」→「新しいウェブフック」を開きます。</li>
+          <li>保存先チャンネルを選び、「ウェブフックURLをコピー」します。</li>
+          <li>上の欄に貼り付け、「設定を保存する」を押します。</li>
+        </ol>
+        <p>項目が見つからない場合はPC版Discordで操作し、ウェブフックを管理する権限を確認してください。</p>
+        <p>URLを知っている人はそのチャンネルへ投稿できます。他人に共有しないでください。友だちには下のアプリ紹介URLを送ります。</p>
+        <a href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank" rel="noopener noreferrer">Discord公式の手順</a>
+      </details>
+      <button class="btn-main" onclick="saveSettings()">設定を保存する</button>
+
+      <section aria-label="友だちに紹介する" style="margin-top:24px; border-top:1px solid #475569; padding-top:16px;">
+        <div style="font-weight:bold;">友だちに紹介する</div>
+        <a class="btn-x" style="background:#ea580c" href="invite.html" target="_blank" rel="noopener noreferrer">紹介ページ・メッセージを用意する ↗</a>
+        <p class="desc">写真を預けるだけで、日常を記録。アプリのリンクを共有できます。</p>
+        <input id="appShareUrl" aria-label="紹介用URL" type="url" readonly value="https://afcp0721-oss.github.io/meshi-log/" onclick="this.select()">
+        <button class="btn-sub" onclick="shareApp()">アプリを共有する</button>
+        <button class="btn-sub" onclick="copyAppUrl()">URLをコピー</button>
+        <p id="appShareStatus" role="status" style="font-size:0.85rem;"></p>
+      </section>
+      <button class="btn-sub" onclick="closeSettings()">閉じる</button>
+    </div>
+
+    <!-- 過去ログモーダル -->
+    <div id="historyModal" class="card" style="display: none;">
+      <div class="header-bar">
+        <div class="title" style="margin-bottom: 0;">📖 保存されたログ一覧</div>
+        <button class="btn-gear" onclick="closeHistory()">✕ 閉じる</button>
+      </div>
+      <div id="historyList" style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px; max-height: 60vh; overflow-y: auto;">
+        <!-- D1ログ差し込み枠 -->
+      </div>
+    </div>
+
+    <!-- メイン操作画面 -->
+    <div id="mainCard" class="card">
+     <!-- ヘッダーエリア（1行目に大見出し、2行目にAI名とボタンを整列） -->
+    <div style="margin-bottom: 14px;">
+      <div class="title">🍽️ めしログ＆ライフログ</div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span id="headerAiTitle" style="font-size: 0.82rem; font-weight: bold; color: #94a3b8;">ログAI: ログアシスタント</span>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn-gear" onclick="loadMealHistory()">📖 過去ログ</button>
+          <button class="btn-gear" onclick="openSettings()">⚙️ 設定</button>
+        </div>
+      </div>
+    </div>
+
+      <!-- PRO機能はコードとして保持。通常画面ではおまかせを標準にする -->
+      <div class="mode-switch" aria-hidden="true"></div>
+
+      <!-- トースト通知枠 -->
+      <div id="toastBox" class="toast"></div>
+
+      <!-- プライバシー警告枠 -->
+      <div id="alertBox" class="alert-box"></div>
+
+      <!-- 最大3枚の写真選択エリア -->
+      <div class="photo-grid-box">
+        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;" onchange="handleFileSelect(event)">
+        <div style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px;">📸 写真を選択（最大3枚）</div>
+        <div id="photoGrid" class="photo-grid">
+          <!-- 選択したサムネイルと「＋」枠がここに並びます -->
+        </div>
+      </div>
+<!-- ちょい足しメモ（音声・1行入力） -->
+      <div style="margin-top: 12px; margin-bottom: 8px;">
+        <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; display: block;">✍️ ちょい足しメモ（任意・音声入力可）</label>
+        <input type="text" id="shortMemoInput" placeholder="例：店名=大勝軒、現場の帰り道" 
+               style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px; color: #f8fafc; font-size: 0.9rem; box-sizing: border-box;">
+      </div>
+    <!-- おまかせモード -->
+      <div id="basicActionArea">
+        <button id="btnQuickUpload" class="btn-main" onclick="uploadQuick()" disabled>
+  <span id="spinBasic" class="spinner" style="display: none;"></span>
+  <span id="textBasic">そのまま預ける</span>
+</button>
+      </div>
+
+      <div id="proActionArea">
+        <button id="btnProGenerate" class="btn-sub" onclick="generatePro()" disabled>
+          <span id="spinPro" class="spinner" style="display:none;"></span>
+          <span id="textPro">確認して預ける</span>
+        </button>
+        <p class="desc" style="margin-top:8px;margin-bottom:0">AIコメントを見てから記録できます。</p>
+      </div>
+      <div id="resultArea" style="margin-top:14px;display:none;"></div>
+
+    </div>
+  </div>
+
+  <!-- 画像拡大スワイプモーダル -->
+  <div id="imageModal" onclick="closeImageModal()">
+    <span class="modal-close">&times;</span>
+    <button class="modal-arrow" style="left: 10px;" onclick="prevImage(event)">&#8249;</button>
+    <img id="modalImg" src="">
+    <button class="modal-arrow" style="right: 10px;" onclick="nextImage(event)">&#8250;</button>
+  </div>
+
+  <!-- スクリプト読み込み（キャッシュ対策 v=4） -->
+  <script src="app.js?v=15"></script>
+</body>
+</html>
